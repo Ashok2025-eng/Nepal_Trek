@@ -1,5 +1,6 @@
 import express,{Application,Request,Response}from"express";
 import trekRoutes from "./routes/trekRoutes"
+import { errorHandler } from "./middlewares/errorHandler";
 
 const app =express();
 
@@ -16,4 +17,12 @@ message:"Nepal Trek API is running"
 
 
 app.use("/api/treks",trekRoutes)
+
+//* error handler
+app.use(errorHandler)
+
+
+
+
+
 export default app;

@@ -1,73 +1,64 @@
-import Trek from "../models/trek";
 import { Request, Response } from "express";
+import Trek from "../models/trek.model";
+import { AppError } from "../utils/AppError";
+import { catchAsync } from "../utils/catchAsync";
 
+export const createTrek = catchAsync(async (req: Request, res: Response) => {
+  const trek = await Trek.create(req.body);
+  res.status(201).json({
+    success: true,
+    data: trek,
+  });
+});
 
-// @desc Create a new trek
-//@route Post /api/treks
+export const getTreks = catchAsync(async (req: Request, res: Response) => {
+  const treks = await Trek.find();
+  res.status(200).json({
+    success: true,
+    count: treks.length,
+    data: treks,
+  });
+});
 
-export const createTrek =async(req:Request,res:Response)=>{
-    try{
+export const getTrekById = catchAsync(async (req: Request, res: Response, next) => {
+  const trek = await Trek.findById(req.params.id);
 
-const trek = await Trek.create(req.body)
-
-res.status(201).json({
-    success:true,
-    data:trek,
-})
-
-
-    }catch(error){
-        res.status(500).json({
-            success:false,
-            message:"Failed to fetch treks",
-            error: error instanceof Error? error. message:error,
-        })
-    }
-
-}
-
-// @desc    Get all treks
-// @route   GET /api/treks
-export const getTreks = async (req: Request, res: Response) => {
-  try {
-    const treks = await Trek.find();
-
-    res.status(200).json({
-      success: true,
-      count: treks.length,
-      data: treks,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch treks",
-      error: error instanceof Error ? error.message : error,
-    });
+  if (!trek) {
+    return next(new AppError("Trek not found", 404));
   }
-};
 
-// @desc    Get a single trek by ID
-// @route   GET /api/treks/:id
-export const getTrekById = async (req: Request, res: Response) => {
-  try {
-    const trek = await Trek.findById(req.params.id);
+  res.status(200).json({
+    success: true,
+    data: trek,
+  });
+});
 
-    if (!trek) {
-      return res.status(404).json({
-        success: false,
-        message: "Trek not found",
-      });
-    }
+export const updateTrek = catchAsync(async (req: Request, res: Response, next) => {
+  const trek = await Trek.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
 
-    res.status(200).json({
-      success: true,
-      data: trek,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch trek",
-      error: error instanceof Error ? error.message : error,
-    });
+  if (!trek) {
+    return next(new AppError("Trek not found", 404));
   }
-};
+
+  res.status(200).json({
+    success: true,
+    data: trek,
+  });
+});
+
+export const deleteTrek = catchAsync(async (req: Request, res: Response, next) => {
+  const trek = await Trek.findByIdAndDelete(req.params.id);
+
+  if (!trek) {
+    return next(new AppError("Trek not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Trek deleted successfully",
+    data: trek,
+  });
+});
