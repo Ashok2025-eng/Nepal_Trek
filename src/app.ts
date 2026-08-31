@@ -1,8 +1,9 @@
 import express, { Request, Response } from "express";
 import { errorHandler } from "./middlewares/errorHandler";
-import authRoutes from "./routes/authRoutes";
-import trekRoutes from "./routes/trekRoutes";
 
+import authRoutes from "./routes/authRoutes";
+import bookingRoutes from "./routes/bookingRoutes";
+import trekRoutes from "./routes/trekRoutes";
 const app = express();
 
 app.use(express.json());
@@ -17,6 +18,7 @@ app.get("/api/health", (req: Request, Res: Response) => {
 
 app.use("/api/treks", trekRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 //* error handler
 app.use(errorHandler);
