@@ -86,3 +86,37 @@ export const getAllBookings = catchAsync(
     });
   },
 );
+
+// @desc    Update booking status (admin only)
+// @route   PUT /api/bookings/:id/status
+export const updateBookingStatus = catchAsync(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const { status } = req.body;
+
+    const validStatuses = ["pending", "confirmed", "cancelled", "completed"];
+
+    if (!validStatuses.includes(status)) {
+      return next(
+        new AppError(
+          `Status must be one of: ${validStatuses.join(", ")}`,
+          400
+        )
+      );
+    }
+
+    const booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true, runValidators: true }
+    );
+
+    if (!booking) {
+      return next(new AppError("Booking not found", 404));
+    }
+
+    res.status(200).json({
+      success: true,
+      data: booking,
+    });
+  }
+);
