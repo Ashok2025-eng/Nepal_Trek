@@ -5,12 +5,14 @@ import {
   getTrekById,
   getTreks,
   updateTrek,
+  uploadTrekImages,
 } from "../controllers/trekController";
 import { protect, restrictTo } from "../middlewares/authMiddleware";
 import {
   trekValidationRules,
   updateTrekValidationRules,
 } from "../middlewares/trekValidator";
+import upload from "../middlewares/uploadMiddleware";
 import { validateRequest } from "../middlewares/validateRequest";
 
 const router = express.Router();
@@ -19,9 +21,17 @@ router.post(
   "/",
   protect,
   restrictTo("admin"),
+  upload.array("images", 5),
   trekValidationRules,
   validateRequest,
   createTrek,
+);
+router.post(
+  "/:id/images",
+  protect,
+  restrictTo("admin"),
+  upload.array("images", 5),
+  uploadTrekImages,
 );
 router.get("/", getTreks);
 router.get("/:id", getTrekById);
