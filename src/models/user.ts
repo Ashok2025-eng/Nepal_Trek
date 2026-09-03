@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import mongoose, {
   CallbackWithoutResultAndOptionalError,
   Document,
@@ -10,6 +11,9 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: "user" | "admin";
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
+  createPasswordResetToken(): string;
   comparePassword(candidatePassword: string): Promise<boolean>;
   createdAt: Date;
   updatedAt: Date;
@@ -40,13 +44,21 @@ const userSchema = new Schema<IUser>(
       enum: ["user", "admin"],
       default: "user",
     },
+    resetPasswordToken: {
+      type: String,
+      select: false,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      select: false,
+    },
   },
   { timestamps: true },
 );
 
-// Hash password before saving
-
-userSchema.pre( "save", async function (next: CallbackWithoutResultAndOptionalError) {
+userSchema.pre(
+  "save",
+  async function (next: CallbackWithoutResultAndOptionalError) {
     if (!this.isModified("password")) {
       return next();
     }
@@ -57,11 +69,23 @@ userSchema.pre( "save", async function (next: CallbackWithoutResultAndOptionalEr
   },
 );
 
-// Instance method to compare entered password with hashed password
 userSchema.methods.comparePassword = async function (
   candidatePassword: string,
 ): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+userSchema.methods.createPasswordResetToken = function (): string {
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  this.resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  this.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  return resetToken;
 };
 
 const User = mongoose.model<IUser>("User", userSchema);

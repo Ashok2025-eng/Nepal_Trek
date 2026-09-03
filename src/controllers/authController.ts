@@ -1,9 +1,11 @@
+import crypto from "crypto";
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import User from "../models/user";
 import { AppError } from "../utils/AppError";
 import { catchAsync } from "../utils/catchAsync";
-import mongoose from "mongoose";
+import { sendEmail as sendEmailUtil } from "../utils/sendEmail";
 
 const generateToken = (userId: string): string => {
   const secret = process.env.JWT_SECRET;
@@ -80,6 +82,88 @@ export const login = catchAsync(
         email: user.email,
         role: user.role,
       },
+    });
+  },
+);
+
+// Request a password reset token
+// post /api/auth/forgot-password
+
+// Request a password reset token
+// post /api/auth/forgot-password
+
+export const forgotPassword = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return next(new AppError("No user found with that email", 404));
+    }
+
+    const resetToken = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
+
+    // FIXED: Wrapped in backticks so template strings parse correctly
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+    // FIXED: Wrapped in backticks to build the text string dynamically
+    const message = `Forgot your password? Submit a PUT request with your new password to:\n\n${resetUrl}\n\nIf you didn't forget your password, please ignore this email! This link is valid for 10 minutes.`;
+
+    // FIXED: Wrapped in try/catch to isolate transport failures safely
+    try {
+      // FIXED: Dispatches the email to your configured Mailtrap sandbox
+      await sendEmailUtil({
+        email: user.email,
+        subject: "Your password reset token (valid for 10 mins)",
+        message,
+      });
+
+      // FIXED: Hides 'resetToken' from JSON payload entirely for security
+      res.status(200).json({
+        success: true,
+        message: "Token sent to email successfully!",
+      });
+    } catch (err) {
+      // FIXED: Failure callback drops database state so stale tokens do not float
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      return next(
+        new AppError("There was an error sending the email. Try again later.", 500)
+      );
+    }
+  },
+);
+
+// Reset password using token
+// put /api/auth/reset-password/:token
+
+export const resetPassword = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(req.params.token)
+      .digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: new Date() },
+    }).select("+password");
+
+    if (!user) {
+      return next(new AppError("Token is invalid or has expired", 400));
+    }
+
+    user.password = req.body.password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset successfully",
     });
   },
 );
