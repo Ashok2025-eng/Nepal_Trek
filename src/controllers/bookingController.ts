@@ -4,6 +4,7 @@ import Booking from "../models/booking.model";
 import Trek from "../models/trek.model";
 import { AppError } from "../utils/AppError";
 import { catchAsync } from "../utils/catchAsync";
+import { sendEmail } from "../utils/sendEmail";
 
 // @desc    Create a new booking
 // @route   POST /api/bookings
@@ -47,6 +48,17 @@ export const createBooking = catchAsync(
       advanceAmount,
     });
 
+// send booking confirmation email - failure here shouldnt block the booking
+try{
+  await sendEmail({
+    email:req.user!.email,
+    subject:"Booking Received -Nepal Trek",
+        message: `Hi ${req.user!.name},\n\nWe've received your booking request for "${trek.name}".\n\nTrip details:\n- Start date: ${new Date(startDate).toDateString()}\n- Number of people: ${numberOfPeople}\n- Total price: $${totalPrice}\n- Advance amount due: $${advanceAmount}\n\nYour booking is currently PENDING. Our team will review and confirm it shortly.\n\nThank you for choosing us!`,
+  })
+}catch(err){
+  console.error("Failed to send booking confirmation email:",err)
+}
+
     res.status(201).json({
       success: true,
       data: booking,
@@ -87,6 +99,7 @@ export const getAllBookings = catchAsync(
   },
 );
 
+
 // @desc    Update booking status (admin only)
 // @route   PUT /api/bookings/:id/status
 export const updateBookingStatus = catchAsync(
@@ -97,10 +110,7 @@ export const updateBookingStatus = catchAsync(
 
     if (!validStatuses.includes(status)) {
       return next(
-        new AppError(
-          `Status must be one of: ${validStatuses.join(", ")}`,
-          400
-        )
+        new AppError(`Status must be one of: ${validStatuses.join(", ")}`, 400)
       );
     }
 
@@ -108,10 +118,37 @@ export const updateBookingStatus = catchAsync(
       req.params.id,
       { status },
       { new: true, runValidators: true }
-    );
+    )
+      .populate("trek", "name")
+      .populate("user", "name email");
 
     if (!booking) {
       return next(new AppError("Booking not found", 404));
+    }
+
+    if (status === "confirmed" || status === "cancelled") {
+      const trekData = booking.trek as any;
+      const userData = booking.user as any;
+
+      const trekName = trekData.name;
+      const userEmail = userData.email;
+      const userName = userData.name;
+
+      try {
+        await sendEmail({
+          email: userEmail,
+          subject:
+            status === "confirmed"
+              ? "Your Booking is Confirmed! - Nepal Trek"
+              : "Booking Cancelled - Nepal Trek",
+          message:
+            status === "confirmed"
+              ? `Hi ${userName},\n\nGreat news! Your booking for "${trekName}" has been CONFIRMED.\n\nWe'll be in touch with further trip details soon.\n\nSee you on the trail!`
+              : `Hi ${userName},\n\nYour booking for "${trekName}" has been cancelled.\n\nIf you have any questions, please reach out to us.`,
+        });
+      } catch (err) {
+        console.error("Failed to send status update email:", err);
+      }
     }
 
     res.status(200).json({

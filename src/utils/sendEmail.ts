@@ -18,7 +18,7 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
   });
   // 2) Define the email delivery options
   const mailOptions = {
-    from: "Auth Support [noreply@yourapp.com](mailto:noreply@yourapp.com)",
+from: "Auth Support <noreply@yourapp.com>",
     to: options.email,
     subject: options.subject,
     text: options.message,

@@ -5,8 +5,7 @@ import mongoose from "mongoose";
 import User from "../models/user";
 import { AppError } from "../utils/AppError";
 import { catchAsync } from "../utils/catchAsync";
-import { sendEmail as sendEmailUtil } from "../utils/sendEmail";
-
+import { sendEmail } from "../utils/sendEmail";
 const generateToken = (userId: string): string => {
   const secret = process.env.JWT_SECRET;
 
@@ -104,42 +103,38 @@ export const forgotPassword = catchAsync(
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
 
-    // FIXED: Wrapped in backticks so template strings parse correctly
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-    // FIXED: Wrapped in backticks to build the text string dynamically
     const message = `Forgot your password? Submit a PUT request with your new password to:\n\n${resetUrl}\n\nIf you didn't forget your password, please ignore this email! This link is valid for 10 minutes.`;
 
-    // FIXED: Wrapped in try/catch to isolate transport failures safely
     try {
-      // FIXED: Dispatches the email to your configured Mailtrap sandbox
-      await sendEmailUtil({
+      await sendEmail({
         email: user.email,
         subject: "Your password reset token (valid for 10 mins)",
         message,
       });
 
-      // FIXED: Hides 'resetToken' from JSON payload entirely for security
       res.status(200).json({
         success: true,
         message: "Token sent to email successfully!",
       });
     } catch (err) {
-      // FIXED: Failure callback drops database state so stale tokens do not float
       user.resetPasswordToken = undefined;
       user.resetPasswordExpires = undefined;
       await user.save({ validateBeforeSave: false });
 
       return next(
-        new AppError("There was an error sending the email. Try again later.", 500)
+        new AppError(
+          "There was an error sending the email. Try again later.",
+          500,
+        ),
       );
     }
   },
 );
 
-// Reset password using token
-// put /api/auth/reset-password/:token
-
+// @desc    Reset password using token
+// @route   PUT /api/auth/reset-password/:token
 export const resetPassword = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const hashedToken = crypto
