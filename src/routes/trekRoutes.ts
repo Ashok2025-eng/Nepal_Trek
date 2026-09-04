@@ -1,4 +1,5 @@
 import express from "express";
+import { getTrekReviews } from "../controllers/reviewController";
 import {
   createTrek,
   deleteTrek,
@@ -44,5 +45,8 @@ router.put(
   updateTrek,
 );
 router.delete("/:id", protect, restrictTo("admin"), deleteTrek);
+
+// add alongside your existing routes:
+router.get("/:trekId/reviews", getTrekReviews);
 
 export default router;

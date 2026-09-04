@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 
 interface IItineraryDay {
   day: number;
@@ -21,6 +21,8 @@ export interface ITrek extends Document {
   inclusions: string[];
   exclusions: string[];
   images: string[];
+  averageRating: number;
+  numReviews: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,7 +44,7 @@ const itinerarySchema = new Schema<IItineraryDay>(
       trim: true,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const trekSchema = new Schema<ITrek>(
@@ -108,8 +110,17 @@ const trekSchema = new Schema<ITrek>(
       default: [],
     },
     images: [String],
+    averageRating: {
+      type: Number,
+      default: 0,
+    },
+    numReviews: {
+      type: Number,
+      default: 0,
+    },
   },
-  { timestamps: true }
+
+  { timestamps: true },
 );
 
 const Trek = mongoose.model<ITrek>("Trek", trekSchema);
