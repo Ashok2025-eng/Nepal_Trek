@@ -6,6 +6,10 @@ import User from "../models/user";
 import { AppError } from "../utils/AppError";
 import { catchAsync } from "../utils/catchAsync";
 import { sendEmail } from "../utils/sendEmail";
+
+
+
+
 const generateToken = (userId: string): string => {
   const secret = process.env.JWT_SECRET;
 

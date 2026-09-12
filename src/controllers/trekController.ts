@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import Trek from "../models/trek.model";
 import { AppError } from "../utils/AppError";
 import { catchAsync } from "../utils/catchAsync";
+import { paginate } from "../utils/paginationAndFilter.utils";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary";
 
 export const createTrek = catchAsync(async (req: Request, res: Response) => {
@@ -13,12 +14,29 @@ export const createTrek = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const getTreks = catchAsync(async (req: Request, res: Response) => {
-  const treks = await Trek.find();
-  res.status(200).json({
-    success: true,
-    count: treks.length,
-    data: treks,
+  const queryObj: Record<string, any> = {};
+
+  if (req.query.region) queryObj.region = req.query.region;
+  if (req.query.difficulty) queryObj.difficulty = req.query.difficulty;
+  if (req.query.priceType) queryObj.priceType = req.query.priceType;
+
+  if (req.query.minPrice || req.query.maxPrice) {
+    queryObj.price = {};
+    if (req.query.minPrice) queryObj.price.$gte = Number(req.query.minPrice);
+    if (req.query.maxPrice) queryObj.price.$lte = Number(req.query.maxPrice);
+  }
+
+  if (req.query.search) {
+    const searchRegex = new RegExp(req.query.search as string, "i");
+    queryObj.$or = [{ name: searchRegex }, { description: searchRegex }];
+  }
+
+  const result = await paginate(Trek, queryObj, {
+    page: Number(req.query.page),
+    limit: Number(req.query.limit),
   });
+
+  res.status(200).json({ success: true, ...result });
 });
 
 export const getTrekById = catchAsync(

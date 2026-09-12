@@ -4,8 +4,8 @@ import Booking from "../models/booking.model";
 import Trek from "../models/trek.model";
 import { AppError } from "../utils/AppError";
 import { catchAsync } from "../utils/catchAsync";
+import { paginate } from "../utils/paginationAndFilter.utils";
 import { sendEmail } from "../utils/sendEmail";
-
 // @desc    Create a new booking
 // @route   POST /api/bookings
 export const createBooking = catchAsync(
@@ -48,16 +48,16 @@ export const createBooking = catchAsync(
       advanceAmount,
     });
 
-// send booking confirmation email - failure here shouldnt block the booking
-try{
-  await sendEmail({
-    email:req.user!.email,
-    subject:"Booking Received -Nepal Trek",
+    // send booking confirmation email - failure here shouldnt block the booking
+    try {
+      await sendEmail({
+        email: req.user!.email,
+        subject: "Booking Received -Nepal Trek",
         message: `Hi ${req.user!.name},\n\nWe've received your booking request for "${trek.name}".\n\nTrip details:\n- Start date: ${new Date(startDate).toDateString()}\n- Number of people: ${numberOfPeople}\n- Total price: $${totalPrice}\n- Advance amount due: $${advanceAmount}\n\nYour booking is currently PENDING. Our team will review and confirm it shortly.\n\nThank you for choosing us!`,
-  })
-}catch(err){
-  console.error("Failed to send booking confirmation email:",err)
-}
+      });
+    } catch (err) {
+      console.error("Failed to send booking confirmation email:", err);
+    }
 
     res.status(201).json({
       success: true,
@@ -87,18 +87,23 @@ export const getMyBookings = catchAsync(
 // @route   GET /api/bookings
 export const getAllBookings = catchAsync(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
-    const bookings = await Booking.find()
-      .populate("trek", "name region duration price")
-      .populate("user", "name email");
-
+    const queryObj: Record<string, any> = {};
+    if (req.query.status) queryObj.status = req.query.status;
+    const result = await paginate(
+      Booking,
+      queryObj,
+      { page: Number(req.query.page), limit: Number(req.query.limit) },
+      [
+        { path: "trek", select: "name region duration price" },
+        { path: "user", select: "name email" },
+      ],
+    );
     res.status(200).json({
       success: true,
-      count: bookings.length,
-      data: bookings,
+      ...result,
     });
   },
 );
-
 
 // @desc    Update booking status (admin only)
 // @route   PUT /api/bookings/:id/status
@@ -110,14 +115,14 @@ export const updateBookingStatus = catchAsync(
 
     if (!validStatuses.includes(status)) {
       return next(
-        new AppError(`Status must be one of: ${validStatuses.join(", ")}`, 400)
+        new AppError(`Status must be one of: ${validStatuses.join(", ")}`, 400),
       );
     }
 
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
       { status },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     )
       .populate("trek", "name")
       .populate("user", "name email");
@@ -155,5 +160,5 @@ export const updateBookingStatus = catchAsync(
       success: true,
       data: booking,
     });
-  }
+  },
 );

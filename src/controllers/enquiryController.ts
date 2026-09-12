@@ -4,6 +4,7 @@ import Enquiry from "../models/enquiry.model";
 import Trek from "../models/trek.model";
 import { AppError } from "../utils/AppError";
 import { catchAsync } from "../utils/catchAsync";
+import { paginate } from "../utils/paginationAndFilter.utils";
 import { sendEmail } from "../utils/sendEmail";
 
 // @desc    Create a new enquiry (no login required)
@@ -36,17 +37,16 @@ export const createEnquiry = catchAsync(
       numberOfPeople,
       tentativeDate,
     });
-        // Auto-reply to the customer confirming we received their enquiry
-try{
-  await sendEmail({
-    email,
-    subject:"We Received Your Enquiry - Nepal Trek",
-            message: `Hi ${name},\n\nThank you for your interest in "${trek.name}"!\n\nWe've received your enquiry and our team will get back to you within 24 hours with pricing and details.\n\nYour message:\n"${message}"\n\nIf you'd like a faster response, feel free to reach out to us directly.\n\nThanks for choosing us!`,
-
-  })
-}catch(err){
-  console.error("Failed to send enquiry confirmation email:",err)
-}
+    // Auto-reply to the customer confirming we received their enquiry
+    try {
+      await sendEmail({
+        email,
+        subject: "We Received Your Enquiry - Nepal Trek",
+        message: `Hi ${name},\n\nThank you for your interest in "${trek.name}"!\n\nWe've received your enquiry and our team will get back to you within 24 hours with pricing and details.\n\nYour message:\n"${message}"\n\nIf you'd like a faster response, feel free to reach out to us directly.\n\nThanks for choosing us!`,
+      });
+    } catch (err) {
+      console.error("Failed to send enquiry confirmation email:", err);
+    }
 
     res.status(201).json({
       success: true,
@@ -59,16 +59,20 @@ try{
 // @route   GET /api/enquiries
 export const getAllEnquiries = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const enquiries = await Enquiry.find()
-      .populate("trek", "name region priceType")
-      .populate("user", "name email")
-      .sort({ createdAt: -1 });
+    const queryObj: Record<string, any> = {};
+    if (req.query.status) queryObj.status = req.query.status;
 
-    res.status(200).json({
-      success: true,
-      count: enquiries.length,
-      data: enquiries,
-    });
+    const result = await paginate(
+      Enquiry,
+      queryObj,
+      { page: Number(req.query.page), limit: Number(req.query.limit) },
+      [
+        { path: "trek", select: "name region priceType" },
+        { path: "user", select: "name email" },
+      ],
+    );
+
+    res.status(200).json({ success: true, ...result });
   },
 );
 
