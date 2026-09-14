@@ -2,8 +2,7 @@ import { body } from "express-validator";
 
 export const enquiryValidationRules = [
   body("trekId")
-    .notEmpty()
-    .withMessage("Trek ID is required")
+    .optional()
     .isMongoId()
     .withMessage("Invalid trek ID format"),
 

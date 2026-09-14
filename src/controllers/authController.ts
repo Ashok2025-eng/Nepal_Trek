@@ -6,9 +6,7 @@ import User from "../models/user";
 import { AppError } from "../utils/AppError";
 import { catchAsync } from "../utils/catchAsync";
 import { sendEmail } from "../utils/sendEmail";
-
-
-
+import { sendTokenCookie } from "../utils/sendTokenCookie.utils";
 
 const generateToken = (userId: string): string => {
   const secret = process.env.JWT_SECRET;
@@ -40,9 +38,11 @@ export const register = catchAsync(
     const token = generateToken(
       (user._id as mongoose.Types.ObjectId).toString(),
     );
+
+    sendTokenCookie(res, token);
+
     res.status(201).json({
       success: true,
-      token,
       data: {
         id: user._id,
         name: user.name,
@@ -76,6 +76,8 @@ export const login = catchAsync(
     const token = generateToken(
       (user._id as mongoose.Types.ObjectId).toString(),
     );
+
+    sendTokenCookie(res, token);
     res.status(200).json({
       success: true,
       token,
@@ -89,8 +91,19 @@ export const login = catchAsync(
   },
 );
 
-// Request a password reset token
-// post /api/auth/forgot-password
+// @desc    Logout - clears the auth cookie
+// @route   POST /api/auth/logout
+export const logout = catchAsync(async (req: Request, res: Response) => {
+  res.cookie("token", "", {
+    httpOnly: true,
+    expires: new Date(0),
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Logged out successfully",
+  });
+});
 
 // Request a password reset token
 // post /api/auth/forgot-password

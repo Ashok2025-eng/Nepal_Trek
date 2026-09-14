@@ -2,6 +2,7 @@ import express from "express";
 import {
   forgotPassword,
   login,
+  logout,
   register,
   resetPassword,
 } from "../controllers/authController";
@@ -17,6 +18,7 @@ const router = express.Router();
 
 router.post("/register", registerValidationRules, validateRequest, register);
 router.post("/login", loginValidationRules, validateRequest, login);
+router.post("/logout", logout);
 
 //New password Reset Routes
 router.post(

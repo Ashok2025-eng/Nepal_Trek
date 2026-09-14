@@ -10,12 +10,14 @@ import bookingRoutes from "./routes/bookingRoutes";
 import enquiryRoutes from "./routes/enquiryRoutes";
 import reviewRoutes from "./routes/reviewRoutes";
 import trekRoutes from "./routes/trekRoutes";
-
+import cookieParser from "cookie-parser";
 
 const app = express();
 
 app.use(express.json())
+app.use(cookieParser())
 app.use(helmet());
+
 
 // CORS — first, so it applies to everything including preflight requests
 app.use(
