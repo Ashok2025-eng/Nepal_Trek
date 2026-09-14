@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import Booking from "../models/booking.model";
 import Trek from "../models/trek.model";
 import { AppError } from "../utils/AppError";
 import { catchAsync } from "../utils/catchAsync";
@@ -72,8 +73,24 @@ export const updateTrek = catchAsync(
   },
 );
 
+// @desc    Delete a trek
+// @route   DELETE /api/treks/:id
 export const deleteTrek = catchAsync(
-  async (req: Request, res: Response, next) => {
+  async (req: Request, res: Response, next: NextFunction) => {
+    const activeBookings = await Booking.countDocuments({
+      trek: req.params.id,
+      status: { $in: ["pending", "confirmed"] },
+    });
+
+    if (activeBookings > 0) {
+      return next(
+        new AppError(
+          `Cannot delete this trek — it has ${activeBookings} active booking(s). Cancel or complete them first.`,
+          400,
+        ),
+      );
+    }
+
     const trek = await Trek.findByIdAndDelete(req.params.id);
 
     if (!trek) {
