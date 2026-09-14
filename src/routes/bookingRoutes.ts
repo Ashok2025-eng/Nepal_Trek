@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  checkAvailability,
   createBooking,
   getAllBookings,
   getMyBookings,
@@ -11,6 +12,7 @@ const router = express.Router();
 
 router.post("/", protect, createBooking);
 router.get("/my", protect, getMyBookings);
+router.get("/availability", protect, checkAvailability);
 router.get("/", protect, restrictTo("admin"), getAllBookings);
 router.put("/:id/status", protect, restrictTo("admin"), updateBookingStatus);
 export default router;

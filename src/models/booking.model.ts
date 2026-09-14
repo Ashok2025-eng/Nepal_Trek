@@ -8,6 +8,7 @@ export interface IBooking extends Document {
   totalPrice: number;
   advanceAmount: number;
   status: "pending" | "confirmed" | "cancelled" | "completed";
+  needsCapacityReview: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,6 +46,10 @@ const bookingSchema = new Schema<IBooking>(
       type: String,
       enum: ["pending", "confirmed", "cancelled", "completed"],
       default: "pending",
+    },
+    needsCapacityReview: {
+      type: Boolean,
+      default: false,
     },
   },
 
